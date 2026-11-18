@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz Game</title>
+<style>
+  body { margin:0; padding:20px; background:#111; color:#fff; font-family:sans-serif; text-align:center; }
+  h1 { font-size:24px; }
+  #question { font-size:20px; margin:20px 0; }
+  button { display:block; width:100%; margin:10px 0; padding:14px; font-size:18px; border:none; border-radius:10px; background:#2d6cdf; color:#fff; }
+  button.correct { background:#2e9e5b; }
+  button.wrong { background:#d64545; }
+  #next { background:#555; display:none; }
+</style>
+</head>
+<body>
+<h1>Quiz Game</h1>
+<div id="score">Score: 0</div>
+<div id="question"></div>
+<div id="answers"></div>
+<button id="next">Next</button>
+
+<script>
+const questions = [
+  { q: "What is the capital of France?", a: ["Paris", "Rome", "Madrid"], c: 0 },
+  { q: "What is 7 x 8?", a: ["54", "56", "64"], c: 1 },
+  { q: "Which planet is closest to the Sun?", a: ["Venus", "Earth", "Mercury"], c: 2 }
+];
+let i = 0, score = 0;
+const qEl = document.getElementById('question');
+const aEl = document.getElementById('answers');
+const next = document.getElementById('next');
+
+function show() {
+  next.style.display = 'none';
+  aEl.innerHTML = '';
+  if (i >= questions.length) {
+    qEl.textContent = 'Done! You scored ' + score + ' / ' + questions.length;
+    return;
+  }
+  qEl.textContent = questions[i].q;
+  questions[i].a.forEach((text, idx) => {
+    const b = document.createElement('button');
+    b.textContent = text;
+    b.onclick = () => pick(b, idx);
+    aEl.appendChild(b);
+  });
+}
+function pick(btn, idx) {
+  const right = questions[i].c;
+  [...aEl.children].forEach((b, n) => {
+    b.disabled = true;
+    if (n === right) b.classList.add('correct');
+  });
+  if (idx === right) { score++; }
+  else { btn.classList.add('wrong
