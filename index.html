@@ -3,55 +3,199 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quiz Game</title>
+<title>Learning Quiz</title>
 <style>
   body { margin:0; padding:20px; background:#111; color:#fff; font-family:sans-serif; text-align:center; }
-  h1 { font-size:24px; }
-  #question { font-size:20px; margin:20px 0; }
+  h1 { font-size:24px; margin:10px 0 20px; }
   button { display:block; width:100%; margin:10px 0; padding:14px; font-size:18px; border:none; border-radius:10px; background:#2d6cdf; color:#fff; }
   button.correct { background:#2e9e5b; }
   button.wrong { background:#d64545; }
-  #next { background:#555; display:none; }
+  button:disabled { opacity:1; }
+  #info { display:flex; justify-content:space-between; font-size:16px; color:#bbb; }
+  #timerWrap { height:10px; background:#333; border-radius:5px; margin:12px 0; overflow:hidden; }
+  #timerBar { height:100%; width:100%; background:#2e9e5b; }
+  #timeText { font-size:22px; font-weight:bold; }
+  #question { font-size:20px; margin:20px 0; min-height:60px; }
+  .hidden { display:none; }
 </style>
 </head>
 <body>
-<h1>Quiz Game</h1>
-<div id="score">Score: 0</div>
-<div id="question"></div>
-<div id="answers"></div>
-<button id="next">Next</button>
+<h1>Learning Quiz</h1>
+
+<div id="menu">
+  <p>Choose a subject (10 questions, 10 seconds each):</p>
+  <button onclick="startGame('English')">English</button>
+  <button onclick="startGame('Biology')">Biology</button>
+  <button onclick="startGame('Chemistry')">Chemistry</button>
+  <button onclick="startGame('Mixed')">Mixed</button>
+</div>
+
+<div id="game" class="hidden">
+  <div id="info"><span id="subject"></span><span id="count"></span><span id="score"></span></div>
+  <div id="timerWrap"><div id="timerBar"></div></div>
+  <div id="timeText">10</div>
+  <div id="question"></div>
+  <div id="answers"></div>
+</div>
+
+<div id="result" class="hidden">
+  <h2 id="resultText"></h2>
+  <button onclick="showMenu()">Play again</button>
+</div>
 
 <script>
-const questions = [
-  { q: "What is the capital of France?", a: ["Paris", "Rome", "Madrid"], c: 0 },
-  { q: "What is 7 x 8?", a: ["54", "56", "64"], c: 1 },
-  { q: "Which planet is closest to the Sun?", a: ["Venus", "Earth", "Mercury"], c: 2 }
-];
-let i = 0, score = 0;
-const qEl = document.getElementById('question');
-const aEl = document.getElementById('answers');
-const next = document.getElementById('next');
+const bank = {
+  English: [
+    { q: "Which word is a noun?", a: ["Happiness", "Quickly", "Beautiful"] },
+    { q: "What is the past tense of 'go'?", a: ["Went", "Goed", "Gone"] },
+    { q: "What is the opposite of 'ancient'?", a: ["Modern", "Old", "Broken"] },
+    { q: "Which sentence is correct?", a: ["She doesn't like tea.", "She don't like tea.", "She not like tea."] },
+    { q: "Which word means the same as 'happy'?", a: ["Joyful", "Angry", "Tired"] },
+    { q: "Which word is a verb?", a: ["Jump", "Table", "Blue"] },
+    { q: "What is the plural of 'child'?", a: ["Children", "Childs", "Childes"] },
+    { q: "He is taller ___ his brother.", a: ["than", "then", "that"] },
+    { q: "Which word is an adjective?", a: ["Green", "Slowly", "Run"] },
+    { q: "A word that describes a verb is called a(n):", a: ["Adverb", "Noun", "Pronoun"] }
+  ],
+  Biology: [
+    { q: "Which part of the cell is the powerhouse?", a: ["Mitochondria", "Nucleus", "Ribosome"] },
+    { q: "Which gas do plants take in for photosynthesis?", a: ["Carbon dioxide", "Oxygen", "Nitrogen"] },
+    { q: "Which organ pumps blood around the body?", a: ["Heart", "Liver", "Lungs"] },
+    { q: "What is the basic unit of life?", a: ["Cell", "Atom", "Organ"] },
+    { q: "Which pigment makes plants green?", a: ["Chlorophyll", "Haemoglobin", "Melanin"] },
+    { q: "Which blood cells fight infection?", a: ["White blood cells", "Red blood cells", "Platelets"] },
+    { q: "How many chambers does the human heart have?", a: ["4", "2", "3"] },
+    { q: "Which vitamin do we get from sunlight?", a: ["Vitamin D", "Vitamin C", "Vitamin A"] },
+    { q: "Loss of water vapour from plant leaves is called:", a: ["Transpiration", "Digestion", "Respiration"] },
+    { q: "What does DNA stand for?", a: ["Deoxyribonucleic acid", "Dynamic nuclear acid", "Double nitrogen acid"] }
+  ],
+  Chemistry: [
+    { q: "What is the chemical formula of water?", a: ["H2O", "CO2", "O2"] },
+    { q: "What is the symbol for sodium?", a: ["Na", "S", "So"] },
+    { q: "What is the pH of a neutral solution?", a: ["7", "0", "14"] },
+    { q: "Which gas do we need to breathe to live?", a: ["Oxygen", "Hydrogen", "Helium"] },
+    { q: "What is the atomic number of carbon?", a: ["6", "12", "8"] },
+    { q: "What is the chemical formula of table salt?", a: ["NaCl", "KCl", "HCl"] },
+    { q: "Which of these is a noble gas?", a: ["Helium", "Oxygen", "Chlorine"] },
+    { q: "What is the symbol for gold?", a: ["Au", "Ag", "Go"] },
+    { q: "Which acid is found in lemons?", a: ["Citric acid", "Sulfuric acid", "Hydrochloric acid"] },
+    { q: "Which particles have a negative charge?", a: ["Electrons", "Protons", "Neutrons"] }
+  ]
+};
 
-function show() {
-  next.style.display = 'none';
-  aEl.innerHTML = '';
-  if (i >= questions.length) {
-    qEl.textContent = 'Done! You scored ' + score + ' / ' + questions.length;
-    return;
+const TOTAL = 10;
+const TIME = 10;
+let list = [], idx = 0, score = 0, locked = false, timeLeft = TIME, timer = null;
+
+const $ = id => document.getElementById(id);
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  qEl.textContent = questions[i].q;
-  questions[i].a.forEach((text, idx) => {
+  return a;
+}
+
+function startGame(name) {
+  let pool = name === 'Mixed'
+    ? bank.English.concat(bank.Biology, bank.Chemistry)
+    : bank[name];
+  list = shuffle(pool).slice(0, TOTAL);
+  idx = 0;
+  score = 0;
+  $('subject').textContent = name;
+  $('menu').classList.add('hidden');
+  $('result').classList.add('hidden');
+  $('game').classList.remove('hidden');
+  showQuestion();
+}
+
+function showQuestion() {
+  if (idx >= list.length) { finish(); return; }
+  locked = false;
+  const item = list[idx];
+  $('count').textContent = 'Q ' + (idx + 1) + '/' + list.length;
+  $('score').textContent = 'Score: ' + score;
+  $('question').textContent = item.q;
+  const box = $('answers');
+  box.innerHTML = '';
+  shuffle(item.a).forEach(text => {
     const b = document.createElement('button');
     b.textContent = text;
-    b.onclick = () => pick(b, idx);
-    aEl.appendChild(b);
+    b.onclick = () => pick(b, text);
+    box.appendChild(b);
+  });
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timer);
+  timeLeft = TIME;
+  updateTimer();
+  timer = setInterval(() => {
+    timeLeft -= 0.1;
+    if (timeLeft <= 0) {
+      timeLeft = 0;
+      updateTimer();
+      timeUp();
+    } else {
+      updateTimer();
+    }
+  }, 100);
+}
+
+function updateTimer() {
+  $('timeText').textContent = Math.ceil(timeLeft);
+  const pct = (timeLeft / TIME) * 100;
+  const bar = $('timerBar');
+  bar.style.width = pct + '%';
+  bar.style.background = timeLeft <= 3 ? '#d64545' : '#2e9e5b';
+}
+
+function revealCorrect() {
+  const right = list[idx].a[0];
+  [...$('answers').children].forEach(b => {
+    b.disabled = true;
+    if (b.textContent === right) b.classList.add('correct');
   });
 }
-function pick(btn, idx) {
-  const right = questions[i].c;
-  [...aEl.children].forEach((b, n) => {
-    b.disabled = true;
-    if (n === right) b.classList.add('correct');
-  });
-  if (idx === right) { score++; }
-  else { btn.classList.add('wrong
+
+function pick(btn, text) {
+  if (locked) return;
+  locked = true;
+  clearInterval(timer);
+  if (text === list[idx].a[0]) {
+    score++;
+  } else {
+    btn.classList.add('wrong');
+  }
+  revealCorrect();
+  $('score').textContent = 'Score: ' + score;
+  setTimeout(() => { idx++; showQuestion(); }, 1200);
+}
+
+function timeUp() {
+  if (locked) return;
+  locked = true;
+  clearInterval(timer);
+  revealCorrect();
+  setTimeout(() => { idx++; showQuestion(); }, 1200);
+}
+
+function finish() {
+  clearInterval(timer);
+  $('game').classList.add('hidden');
+  $('result').classList.remove('hidden');
+  $('resultText').textContent = 'Done! You scored ' + score + ' / ' + list.length;
+}
+
+function showMenu() {
+  $('result').classList.add('hidden');
+  $('game').classList.add('hidden');
+  $('menu').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
